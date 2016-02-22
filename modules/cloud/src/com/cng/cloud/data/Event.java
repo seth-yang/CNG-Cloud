@@ -1,9 +1,11 @@
 package com.cng.cloud.data;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
-import java.sql.Timestamp;
+import java.util.Date;
 
 /**
  * Created by game on 2016/2/23
@@ -13,8 +15,14 @@ import java.sql.Timestamp;
 public class Event {
     private String id;
     private String hostId;
-    private Timestamp timestamp;
+    @Expose
+    @SerializedName ("ts")
+    private Date timestamp;
+    @Expose
+    @SerializedName ("t")
     private double temperature;
+    @Expose
+    @SerializedName ("h")
     private double humidity;
 
     @Id
@@ -41,11 +49,11 @@ public class Event {
 
     @Basic
     @Column (name = "ts")
-    public Timestamp getTimestamp () {
+    public Date getTimestamp () {
         return timestamp;
     }
 
-    public void setTimestamp (Timestamp ts) {
+    public void setTimestamp (Date ts) {
         this.timestamp = ts;
     }
 

@@ -39,7 +39,7 @@ public class UploadServlet extends HttpServlet {
             return;
         }
 
-        Result<Object> result = new Result<Object> ();
+        Result<Object> result = new Result<> ();
         Gson g = GsonHelper.getGson (true, true);
         try {
             byte[] buff = IOUtil.read (request.getInputStream ());

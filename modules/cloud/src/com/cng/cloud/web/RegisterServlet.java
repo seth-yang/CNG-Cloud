@@ -28,7 +28,7 @@ public class RegisterServlet extends HttpServlet  {
         Gson g = GsonHelper.getGson ();
         Host host = g.fromJson (content, Host.class);
         IHostService service = (IHostService) ServiceFactory.getBean ("hostService");
-        Result <Object> result = new Result<Object> ();
+        Result <Object> result = new Result<> ();
         if (service.existsHost (host.getMac ())) {
             result.setState ("ok");
         } else {
