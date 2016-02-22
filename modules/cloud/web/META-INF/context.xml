@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Context path="/">
+    <Resource name="jdbc/cng" auth="Container" type="javax.sql.DataSource"
+              maxActive="30" maxIdle="10" maxWait="10000"
+              logAbandoned="true" removeAbandoned="true" removeAbandonedTimeout="60"
+              username="cng" password="cng" driverClassName="org.postgresql.Driver"
+              url="jdbc:postgresql://10.247.1.22/cng"/>
+</Context>
