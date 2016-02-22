@@ -42,5 +42,6 @@
     <orderEntry type="library" name="log4j" level="application" />
     <orderEntry type="library" name="Hibernate 3" level="application" />
     <orderEntry type="library" name="Spring 3" level="application" />
+    <orderEntry type="library" name="postgresql-9.0-801.jdbc3" level="application" />
   </component>
 </module>
