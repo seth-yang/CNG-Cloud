@@ -24,6 +24,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <property name="annotatedClasses">
             <list>
                 <value>com.cng.cloud.data.Host</value>
+                <value>com.cng.cloud.data.EnvData</value>
                 <value>com.cng.cloud.data.Event</value>
             </list>
         </property>
@@ -81,7 +82,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
                             <bean parent="genericDao">
                                 <property name="target">
                                     <bean parent="abstractDaoTarget">
-                                        <constructor-arg value="com.cng.cloud.data.Event" />
+                                        <constructor-arg value="com.cng.cloud.data.EnvData" />
                                     </bean>
                                 </property>
                             </bean>

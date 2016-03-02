@@ -1,3 +1,4 @@
+<%@ page import="java.util.UUID" %>
 <%--
   Created by IntelliJ IDEA.
   User: game
@@ -10,7 +11,8 @@
   <head>
     <title></title>
   </head>
-  <body>
-
+  <body>Hello CNG.Monitor
+  <br />
+  <%= UUID.randomUUID ()%><br />
   </body>
 </html>

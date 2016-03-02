@@ -1,32 +1,23 @@
 package com.cng.cloud.data;
 
-import com.google.gson.annotations.Expose;
-import com.google.gson.annotations.SerializedName;
 import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
 import java.util.Date;
 
 /**
- * Created by game on 2016/2/23
+ * Created by game on 2016/2/27
  */
 @Entity
 @Table (name = "events")
 public class Event {
     private String id;
     private String hostId;
-    @Expose
-    @SerializedName ("ts")
-    private Date timestamp;
-    @Expose
-    @SerializedName ("t")
-    private double temperature;
-    @Expose
-    @SerializedName ("h")
-    private double humidity;
+    private Date ts;
+    private EventType type;
+    private String eventData;
 
     @Id
-    @Column (name = "id")
     @GeneratedValue (generator = "system-uuid")
     @GenericGenerator (name = "system-uuid", strategy = "uuid")
     public String getId () {
@@ -49,32 +40,33 @@ public class Event {
 
     @Basic
     @Column (name = "ts")
-    public Date getTimestamp () {
-        return timestamp;
+    public Date getTs () {
+        return ts;
     }
 
-    public void setTimestamp (Date ts) {
-        this.timestamp = ts;
-    }
-
-    @Basic
-    @Column (name = "temperature")
-    public double getTemperature () {
-        return temperature;
-    }
-
-    public void setTemperature (double temperature) {
-        this.temperature = temperature;
+    public void setTs (Date ts) {
+        this.ts = ts;
     }
 
     @Basic
-    @Column (name = "humidity")
-    public double getHumidity () {
-        return humidity;
+    @Column (name = "event_type")
+    @Enumerated (EnumType.STRING)
+    public EventType getType () {
+        return type;
     }
 
-    public void setHumidity (double humidity) {
-        this.humidity = humidity;
+    public void setType (EventType eventType) {
+        this.type = eventType;
+    }
+
+    @Basic
+    @Column (name = "event_data")
+    public String getEventData () {
+        return eventData;
+    }
+
+    public void setEventData (String eventData) {
+        this.eventData = eventData;
     }
 
     @Override
@@ -83,7 +75,6 @@ public class Event {
         if (o == null || getClass () != o.getClass ()) return false;
 
         Event event = (Event) o;
-
         return id != null && id.equals (event.getId ());
     }
 
