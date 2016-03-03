@@ -1,14 +1,13 @@
 package com.cng.cloud.web;
 
-import com.cng.cloud.data.EnvData;
-import com.cng.cloud.data.Event;
-import com.cng.cloud.data.Result;
-import com.cng.cloud.data.UploadData;
+import com.cng.cloud.data.*;
 import com.cng.cloud.service.IEventService;
 import com.cng.cloud.util.EventListTypeToken;
+import com.cng.cloud.util.EventTypeTranslator;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.apache.log4j.Logger;
-import org.dreamwork.gson.GsonHelper;
+import org.dreamwork.gson.DateTranslator;
 import org.dreamwork.persistence.ServiceFactory;
 import org.dreamwork.util.IOUtil;
 import org.dreamwork.util.StringUtil;
@@ -47,7 +46,21 @@ public class UploadServlet extends HttpServlet {
         }
 
         Result<Object> result = new Result<> ();
-        Gson g = GsonHelper.getGson (true, true);
+        Gson g = new GsonBuilder ()
+                .excludeFieldsWithoutExposeAnnotation ()
+                .registerTypeHierarchyAdapter (
+                        java.util.Date.class,
+                        new DateTranslator.LongDateTranslator ()
+                ).registerTypeAdapter (EventType.class, new EventTypeTranslator ())
+                .create ();
+/*
+        Gson g = GsonHelper.getGson (
+                true,
+                true,
+                new TypeAdapterWrapper (
+                        EventType.class, TypeAdapterWrapper.AdapterType.Normal, new EventTypeTranslator ())
+        );
+*/
         try {
             byte[] buff = IOUtil.read (request.getInputStream ());
             String content = new String (buff, "utf-8");

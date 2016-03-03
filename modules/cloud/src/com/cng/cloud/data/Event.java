@@ -1,5 +1,7 @@
 package com.cng.cloud.data;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
@@ -11,10 +13,19 @@ import java.util.Date;
 @Entity
 @Table (name = "events")
 public class Event {
+    @Expose
     private String id;
     private String hostId;
-    private Date ts;
+    @Expose
+    @SerializedName ("TS")
+    private Date timestamp;
+
+    @Expose
+    @SerializedName ("T")
     private EventType type;
+
+    @Expose
+    @SerializedName ("D")
     private String eventData;
 
     @Id
@@ -40,12 +51,12 @@ public class Event {
 
     @Basic
     @Column (name = "ts")
-    public Date getTs () {
-        return ts;
+    public Date getTimestamp () {
+        return timestamp;
     }
 
-    public void setTs (Date ts) {
-        this.ts = ts;
+    public void setTimestamp (Date ts) {
+        this.timestamp = ts;
     }
 
     @Basic
