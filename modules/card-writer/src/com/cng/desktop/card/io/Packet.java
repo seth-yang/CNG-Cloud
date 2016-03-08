@@ -1,5 +1,6 @@
 package com.cng.desktop.card.io;
 
+import com.cng.desktop.card.util.Tools;
 import org.dreamwork.util.StringUtil;
 
 import java.io.ByteArrayOutputStream;
@@ -25,7 +26,7 @@ public class Packet {
                 "\t state  : " + String.format ("%02X", state) + "\r\n" +
                 "\t type   : " + String.format ("%02X", type) + "\r\n" +
                 "\t length : " + String.format ("%02X", length) + "\r\n" +
-                "\t data   : " + StringUtil.dump (data) + "\r\n" +
+                "\t data   : " + Tools.toHex (data) + "\r\n" +
                 "\t tail   : " + String.format ("%04X", tail) + "\r\n}";
     }
 

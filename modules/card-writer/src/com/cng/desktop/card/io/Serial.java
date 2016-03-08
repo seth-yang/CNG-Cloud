@@ -1,6 +1,5 @@
 package com.cng.desktop.card.io;
 
-import com.cng.desktop.card.util.Tools;
 import gnu.io.*;
 import org.apache.log4j.Logger;
 import org.dreamwork.util.StringUtil;
@@ -27,15 +26,14 @@ public class Serial {
 
     private final BlockingQueue<Packet> incoming = new ArrayBlockingQueue<> (16);
     private static final Logger logger = Logger.getLogger (Serial.class);
+    private static final byte[] QUIT   = new byte[0];
 
     private static final int TIMEOUT = 2000;
 
     private PacketChecker checker;
     private SerialReadWorker worker;
 
-    public Serial () {
-
-    }
+    public Serial () {}
 
     public Serial (String name) {
         this.name = name;
@@ -114,8 +112,8 @@ public class Serial {
         return incoming.poll (timeout, unit);
     }
 
-    public Packet read () {
-        return incoming.poll ();
+    public Packet read () throws InterruptedException {
+        return incoming.take ();
     }
 
     public void write (Command command) throws IOException {
@@ -157,100 +155,104 @@ public class Serial {
 
         @Override
         public void run () {
-            while (true) {
-                try {
-                    int n = in.read ();
-//                    if (n == -1) break;
-                    if (n != -1)
-                        System.out.printf (" %02X", n);
-/*
-                    int n = in.available ();
-                    if (n > 0) {
-                        byte[] buff = new byte[n];
-                        int length = in.read (buff);
-                        System.out.print (Tools.toHex (buff));
-//                        System.out.write (buff, 0, length);
-                    }
-*/
-                } catch (IOException e) {
-                    e.printStackTrace ();
-                }
-
-            }
-
-//            System.out.println ("Kill");
-/*
+            int pos = 0, max_length = Integer.MAX_VALUE, n;
             ByteArrayOutputStream baos = new ByteArrayOutputStream ();
-            DataInputStream dis = new DataInputStream (in);
             while (running) {
                 try {
-                    Packet packet = new Packet ();
-                    packet.header = dis.readUnsignedShort ();
-                    packet.state  = dis.read ();
-                    packet.type   = dis.read ();
-                    packet.length = dis.read ();
-                    packet.data   = new byte [packet.length];
-                    int length = dis.read (packet.data, 0, packet.length);
-                    if (length != packet.data.length) {
-                        throw new IOException ("Expect " + packet.length + " bytes, but receive " + length + " bytes.");
+                    n = in.read ();
+                    if (n >= 0) {
+                        baos.write (n);
+                        if (pos == 4) {
+                            max_length = n + 7;         // 5 bytes header, 3 bytes tail
+                        } else if (pos >= max_length) {
+                            checker.put (baos.toByteArray ());
+
+                            pos = 0;
+                            max_length = Integer.MAX_VALUE;
+                            baos.reset ();
+                        }
+                        pos ++;
                     }
-                    packet.crc    = dis.read ();
-                    packet.tail   = dis.readUnsignedShort ();
-                    checker.put (packet);
-                } catch (IOException e) {
+                    sleep (1);
+                } catch (Exception e) {
                     e.printStackTrace ();
                 }
             }
-*/
         }
     }
 
     private class PacketChecker extends Thread {
-        private BlockingQueue<Packet> packets = new ArrayBlockingQueue<> (16);
+        private BlockingQueue<byte[]> packets = new ArrayBlockingQueue<> (16);
 
-        void put (Packet packet) {
-            packets.offer (packet);
+        void put (byte[] buff) {
+            packets.offer (buff);
         }
 
         void cancel () {
-            packets.offer (Packet.DISPOSE);
+            packets.offer (QUIT);
         }
 
         @Override
         public void run () {
             while (true) {
-                Packet packet = packets.poll ();
-                if (packet != null) {
-                    if (packet == Packet.DISPOSE) {
-                        break;
-                    }
+                byte[] buff = packets.poll ();
+                if (buff == QUIT) {
+                    break;
+                }
 
-                    if (packet.header != 0xCAFE) {
-                        logger.error ("Invalid packet header: " + String.format ("%04X", packet.header));
-                        continue;
-                    }
-                    if (packet.tail != 0xBABE) {
-                        logger.error ("Invalid packet tail: " + String.format ("%04X", packet.tail));
-                        continue;
-                    }
-
-                    int sum = packet.state + packet.type + packet.length;
-                    for (int i = 0; i < packet.length; i ++) {
-                        sum += packet.data [i] & 0xff;
-                    }
-                    sum &= 0xff;
-                    if (sum != packet.crc) {
-                        logger.error (String.format ("Invalid CRC, expect %02X but receive %02X", sum, packet.crc));
-                        continue;
-                    }
-
-                    incoming.offer (packet);
+                if (buff != null) try {
+                    Packet packet = decode (buff);
+                    if (validate (packet))
+                        incoming.offer (packet);
+                } catch (IOException ex) {
+                    //
                 }
             }
 
             if (logger.isDebugEnabled ()) {
                 logger.debug ("packet checker shutdown.");
             }
+        }
+
+        private Packet decode (byte[] buff) throws IOException {
+            ByteArrayInputStream bais = new ByteArrayInputStream (buff);
+            DataInputStream dis = new DataInputStream (bais);
+            Packet packet = new Packet ();
+            packet.header = dis.readUnsignedShort ();
+            packet.state  = dis.read ();
+            packet.type   = dis.read ();
+            packet.length = dis.read ();
+            packet.data   = new byte [packet.length];
+            int length = dis.read (packet.data, 0, packet.length);
+            if (length != packet.data.length) {
+                throw new IOException ("Expect " + packet.length + " bytes, but receive " + length + " bytes.");
+            }
+            packet.crc    = dis.read ();
+            packet.tail   = dis.readUnsignedShort ();
+            return packet;
+        }
+
+        private boolean validate (Packet packet) {
+            if (packet.header != 0xCAFE) {
+                logger.error ("Invalid packet header: " + String.format ("%04X", packet.header));
+                return false;
+            }
+            if (packet.tail != 0xBABE) {
+                logger.error ("Invalid packet tail: " + String.format ("%04X", packet.tail));
+                return false;
+            }
+
+            int sum = packet.state + packet.type + packet.length;
+            for (int i = 0; i < packet.length; i ++) {
+                sum += packet.data [i] & 0xff;
+            }
+            sum &= 0xff;
+            if (sum != packet.crc) {
+                logger.error (String.format ("Invalid CRC, expect %02X but receive %02X", sum, packet.crc));
+                return false;
+            }
+
+            return true;
         }
     }
 }
