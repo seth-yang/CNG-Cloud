@@ -17,6 +17,10 @@ public class Command {
 
     public Command () {}
 
+    public Command (short id, int action) {
+        this (id, action, false, 0, 0, 0);
+    }
+
     public Command (short id, int action, boolean admin, long timestamp, long expire, int cardNo) {
         this.id = id;
         this.action = action;

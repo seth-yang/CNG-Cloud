@@ -4,6 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Enumeration;
 
 /**
  * Created by game on 2016/3/7
@@ -39,11 +40,23 @@ public class MainFrame extends JFrame implements ActionListener {
 
     public static void main (String[] args) throws Exception {
         UIManager.setLookAndFeel (UIManager.getSystemLookAndFeelClassName ());
+        Enumeration<Object> keys = UIManager.getDefaults().keys();
+        Object key, value;
+        Font font = new Font ("MSYH", Font.PLAIN, 16);
+        while (keys.hasMoreElements ()) {
+            key = keys.nextElement ();
+            value = UIManager.get (key);
+
+            if (value instanceof Font) {
+                UIManager.put (key, font);
+            }
+        }
         new MainFrame () ;
     }
 
     @Override
     public void actionPerformed (ActionEvent e) {
+/*
         switch (e.getActionCommand ()) {
             case "button 1" :
                 JInternalFrame frame = new WriteCardFrame ();
@@ -52,5 +65,6 @@ public class MainFrame extends JFrame implements ActionListener {
                 frame.setVisible (true);
                 break;
         }
+*/
     }
 }

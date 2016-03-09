@@ -17,6 +17,7 @@ import java.util.*;
 public class SerialTest {
     public static void main (String[] args) throws Exception {
         final Serial serial = new Serial ("COM6");
+        serial.setBaudRate (115200);
         serial.connect ();
 
         new Thread () {
@@ -47,10 +48,13 @@ public class SerialTest {
         command.minVersion = 10;
         System.out.println (command);
         System.out.println (Tools.toHex (command.toByteArray ()));
-        for (int i = 3; i > 0; i --) {
-            System.out.println (i + "...");
-            Thread.sleep (1000);
+        for (int j = 0; j < 10; j ++) {
+            for (int i = 3; i > 0; i--) {
+                System.out.println (i + "...");
+                Thread.sleep (1000);
+            }
+            serial.write (command);
+            Thread.sleep (10000);
         }
-        serial.write (command);
     }
 }

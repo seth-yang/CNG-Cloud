@@ -5,6 +5,9 @@ import org.apache.log4j.Logger;
 import org.dreamwork.util.StringUtil;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -32,6 +35,18 @@ public class Serial {
 
     private PacketChecker checker;
     private SerialReadWorker worker;
+
+    public static List<String> getAllSerialPorts () {
+        Enumeration en = CommPortIdentifier.getPortIdentifiers ();
+        List<String> names = new ArrayList<> ();
+        while (en.hasMoreElements ()) {
+            CommPortIdentifier id = (CommPortIdentifier) en.nextElement ();
+            if (id.getPortType () == CommPortIdentifier.PORT_SERIAL)
+                names.add (id.getName ());
+        }
+
+        return names;
+    }
 
     public Serial () {}
 
@@ -113,7 +128,9 @@ public class Serial {
     }
 
     public Packet read () throws InterruptedException {
-        return incoming.take ();
+        Packet packet = incoming.take ();
+        System.out.println ("return a data.");
+        return packet;
     }
 
     public void write (Command command) throws IOException {
@@ -167,9 +184,9 @@ public class Serial {
                         } else if (pos >= max_length) {
                             checker.put (baos.toByteArray ());
 
-                            pos = 0;
+                            pos = -1;
                             max_length = Integer.MAX_VALUE;
-                            baos.reset ();
+                            baos = new ByteArrayOutputStream ();
                         }
                         pos ++;
                     }
