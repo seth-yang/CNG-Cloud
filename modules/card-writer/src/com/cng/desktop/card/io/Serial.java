@@ -20,6 +20,7 @@ public class Serial {
     private OutputStream out;
     private SerialPort port;
     private String name;
+    private boolean connected = false;
 
     private int
             baudRate = 9600,
@@ -35,6 +36,7 @@ public class Serial {
 
     private PacketChecker checker;
     private SerialReadWorker worker;
+    private ISerialConnectListener listener;
 
     public static List<String> getAllSerialPorts () {
         Enumeration en = CommPortIdentifier.getPortIdentifiers ();
@@ -102,6 +104,10 @@ public class Serial {
         this.parity = parity;
     }
 
+    public void setConnectListener (ISerialConnectListener listener) {
+        this.listener = listener;
+    }
+
     public void connect () throws Exception {
         CommPortIdentifier identifier = CommPortIdentifier.getPortIdentifier (name);
         if (identifier.isCurrentlyOwned ()) {
@@ -118,9 +124,18 @@ public class Serial {
             worker = new SerialReadWorker ();
             checker.start ();
             worker.start ();
+
+            Thread.sleep (2000);
+            connected = true;
+            if (this.listener != null)
+                listener.onConnected ();
         } else {
             throw new IOException (name + " is not Serial Port!");
         }
+    }
+
+    public boolean isConnected () {
+        return connected;
     }
 
     public Packet read (int timeout, TimeUnit unit) throws InterruptedException {
@@ -128,15 +143,13 @@ public class Serial {
     }
 
     public Packet read () throws InterruptedException {
-        Packet packet = incoming.take ();
-        System.out.println ("return a data.");
-        return packet;
+        return incoming.take ();
     }
 
     public void write (Command command) throws IOException {
         byte[] buff = command.toByteArray ();
         if (logger.isDebugEnabled ()) {
-            logger.debug (">>>>>>>>>>>>>>>\r\n" + StringUtil.format (buff) + ">>>>>>>>>>>>>>>");
+            logger.debug ("Serial::write data\r\n>>>>>>>>>>>>>>>>>>>>>>\r\n" + StringUtil.format (buff) + "\r\n>>>>>>>>>>>>>>>>>>>>>>");
         }
         out.write (buff);
     }
@@ -144,6 +157,7 @@ public class Serial {
     public void disconnect () {
         if (worker != null) {
             worker.cancel ();
+            incoming.offer (Packet.DISPOSE);
         }
         if (checker != null) {
             checker.cancel ();
@@ -161,6 +175,8 @@ public class Serial {
         if (port != null) {
             port.close ();
         }
+        if (this.listener != null)
+            listener.onDisconnected ();
     }
 
     private class SerialReadWorker extends Thread {
@@ -182,11 +198,15 @@ public class Serial {
                         if (pos == 4) {
                             max_length = n + 7;         // 5 bytes header, 3 bytes tail
                         } else if (pos >= max_length) {
-                            checker.put (baos.toByteArray ());
+                            byte[] buff = baos.toByteArray ();
+                            if (logger.isDebugEnabled ()) {
+                                logger.debug ("Serial::read data\r\n<<<<<<<<<<<<<<<<<<<<<<\r\n" + StringUtil.format (buff) + "\r\n<<<<<<<<<<<<<<<<<<<<<<");
+                            }
+                            checker.put (buff);
 
                             pos = -1;
                             max_length = Integer.MAX_VALUE;
-                            baos = new ByteArrayOutputStream ();
+                            baos.reset ();
                         }
                         pos ++;
                     }
@@ -246,6 +266,8 @@ public class Serial {
             }
             packet.crc    = dis.read ();
             packet.tail   = dis.readUnsignedShort ();
+            if (logger.isDebugEnabled ())
+                logger.debug ("Decoded packet = " + packet);
             return packet;
         }
 

@@ -13,7 +13,11 @@ public class Command {
     public short id;
     public int action, admin, timestamp, expire, cardNo, mainVersion = 1, minVersion = 0;
 
-    public static final int ACTION_WRITE = 'W', ACTION_READ = 'R';
+    public static final int ACTION_WRITE = 'W', ACTION_READ = 'R', ACTION_ERASE = 'E', ACTION_NOOP = 'N';
+
+    public static final Command READ  = new ActionCommand (ACTION_READ),
+                                ERASE = new ActionCommand (ACTION_ERASE),
+                                NOOP  = new ActionCommand (ACTION_NOOP);
 
     public Command () {}
 
@@ -48,7 +52,6 @@ public class Command {
     public byte[] toByteArray () {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream ();
-//            baos.write (Tools.intToBytes (header, 2, true));
             baos.write (action);
             baos.write (admin);
             baos.write (Tools.intToBytes (id, 2, true));

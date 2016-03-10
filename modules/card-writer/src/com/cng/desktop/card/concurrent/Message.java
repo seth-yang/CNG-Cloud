@@ -22,4 +22,8 @@ public class Message {
         this (what);
         data.put (DEFAULT_KEY, value);
     }
+
+    public Object get () {
+        return data.get (DEFAULT_KEY);
+    }
 }
