@@ -17,7 +17,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
             <props>
                 <prop key="hibernate.show_sql">${hibernate.showSQL}</prop>
                 <prop key="hibernate.dialect">org.hibernate.dialect.PostgreSQLDialect</prop>
-                <prop key="hibernate.connection.url">jdbc:postgresql://10.247.1.22:5432/cng</prop>
+                <prop key="hibernate.connection.url">jdbc:postgresql://localhost:5432/cng</prop>
                 <prop key="hibernate.connection.driver_class">org.postgresql.Driver</prop>
             </props>
         </property>
@@ -26,6 +26,9 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
                 <value>com.cng.cloud.data.Host</value>
                 <value>com.cng.cloud.data.EnvData</value>
                 <value>com.cng.cloud.data.Event</value>
+                <value>com.cng.cloud.data.Card</value>
+                <value>com.cng.cloud.data.CardMapping</value>
+                <value>com.cng.cloud.data.IRCode</value>
             </list>
         </property>
     </bean>

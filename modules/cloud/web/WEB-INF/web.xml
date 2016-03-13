@@ -31,4 +31,13 @@
         <servlet-name>register</servlet-name>
         <url-pattern>/register</url-pattern>
     </servlet-mapping>
+
+    <servlet>
+        <servlet-name>card</servlet-name>
+        <servlet-class>com.cng.cloud.web.CardServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>card</servlet-name>
+        <url-pattern>/card</url-pattern>
+    </servlet-mapping>
 </web-app>
