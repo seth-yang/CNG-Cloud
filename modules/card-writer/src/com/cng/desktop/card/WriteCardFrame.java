@@ -10,13 +10,24 @@ import com.cng.desktop.card.io.Command;
 import com.cng.desktop.card.io.ISerialConnectListener;
 import com.cng.desktop.card.io.Packet;
 import com.cng.desktop.card.io.Serial;
+import com.cng.desktop.card.spec.CNGKeyFetcherFactory;
+import com.cng.desktop.card.util.HttpUtil;
+import com.cng.desktop.card.util.Tools;
 import org.apache.log4j.Logger;
+import org.dreamwork.secure.AlgorithmMapping;
+import org.dreamwork.secure.IKeyFetcher;
+import org.dreamwork.secure.SecureContext;
+import org.dreamwork.secure.SecureUtil;
+import org.dreamwork.util.IOUtil;
 import org.dreamwork.util.StringUtil;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.security.PublicKey;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -39,6 +50,8 @@ public class WriteCardFrame extends JFrame implements IMessageHandler, ActionLis
 
     private MessageHandler handler = new MessageHandlerDelegate (this);
 
+    private SecureContext context = new SecureContext ();
+
     private static final int FIND_PORTS         =  0;
     private static final int SHOW_ERROR         =  1;
     private static final int SHOW_MESSAGE       =  2;
@@ -56,6 +69,7 @@ public class WriteCardFrame extends JFrame implements IMessageHandler, ActionLis
     private static final Logger logger          = Logger.getLogger (WriteCardFrame.class);
     private static final DecimalFormat df       = new DecimalFormat ("000000");
     private static final SimpleDateFormat sf    = new SimpleDateFormat ("yyyy-MM-dd");
+    private static final String CLOUD_SERVER    = "http://localhost:8080/cng";
 
     public WriteCardFrame () {
         super ("写入卡");
@@ -161,7 +175,8 @@ public class WriteCardFrame extends JFrame implements IMessageHandler, ActionLis
             if (sender == txtAddPlace) {
                 handler.sendNonUIMessage (EDIT_PLACE);
             } else if (sender == txtNewCard) {
-                handler.sendNonUIMessage (CREATE_NEW_CARD);
+                createNewCard ();
+//                handler.sendNonUIMessage (CREATE_NEW_CARD);
             }
         }
 
@@ -230,6 +245,28 @@ public class WriteCardFrame extends JFrame implements IMessageHandler, ActionLis
             }
         }
         cmbPorts.addActionListener (this);
+
+        context.setBlockEncryption (AlgorithmMapping.BlockEncryption.AES128_CBC);
+        context.setKeyTransport (AlgorithmMapping.KeyTransport.RSA_OAEP_MGF1P);
+
+        try {
+            initToken ();
+        } catch (IOException e) {
+            e.printStackTrace ();
+        }
+    }
+    private String token;
+    private void initToken () throws IOException {
+        String path = "META-INF/token";
+        try (InputStream in = getClass ().getClassLoader ().getResourceAsStream (path)) {
+            BufferedReader reader = new BufferedReader (new InputStreamReader (in, "utf-8"));
+            String line = reader.readLine ();
+            if (line != null) {
+                token = line.trim ();
+            }
+            line = reader.readLine ();
+            // todo: validate the token.
+        }
     }
 
     private void bindSerial (String name) throws Exception {
@@ -267,9 +304,50 @@ public class WriteCardFrame extends JFrame implements IMessageHandler, ActionLis
     }
 
     private void writeCard () {
+        if (!checkData ()) {
+            return;
+        }
+
+        // fetch card no from server
+        int cardNo = -1;
+/*
+        try {
+            cardNo = fetchCardNo ();
+        } catch (Exception e) {
+            e.printStackTrace ();
+        }
+*/
+        try {
+            String url = CLOUD_SERVER + "/card?" + token;
+            HttpURLConnection conn = (HttpURLConnection) new URL (url).openConnection ();
+            byte[] data = null;
+            try {
+                conn.setDoInput (true);
+                conn.setRequestMethod ("POST");
+
+                InputStream in = conn.getInputStream ();
+                data = IOUtil.read (in);
+            } finally {
+                conn.disconnect ();
+            }
+/*
+            HttpUtil.post (url);
+*/
+            if (data != null) {
+                CNGKeyFetcherFactory factory = new CNGKeyFetcherFactory ();
+                IKeyFetcher fetcher = factory.getKeyFetcher ();
+                PublicKey key = fetcher.getPublicKey (null);
+                SecureUtil util = new SecureUtil (context);
+                data = util.decrypt (data, key);
+                cardNo = Tools.bytesToInt (data);
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace ();
+        }
+
         Command command = new Command ((short) 1, Command.ACTION_WRITE);
         command.admin = chkAdmin.isSelected () ? 1 : 0;
-        command.cardNo = Integer.parseInt (txtCardNo.getText ());
+        command.cardNo = cardNo;
 
         Integer year = (Integer) cmbYear.getSelectedItem ();
         Integer month = (Integer) cmbMonth.getSelectedItem ();
@@ -279,14 +357,37 @@ public class WriteCardFrame extends JFrame implements IMessageHandler, ActionLis
         c.set (Calendar.MONTH, month - 1);
         c.set (Calendar.DAY_OF_MONTH, day);
         command.expire = (int) (c.getTimeInMillis () / 1000);
-        command.mainVersion = 1;
-        command.minVersion = 0;
+        command.majorVersion = 1;
+        command.minorVersion = 0;
         command.timestamp = (int) (System.currentTimeMillis () / 1000);
         try {
             serial.write (command);
         } catch (IOException ex) {
             //
         }
+        txtCardNo.setText (String.valueOf (cardNo));
+    }
+
+    private boolean checkData () {
+        String userName = txtUserName.getText ().trim ();
+        int year = (int) cmbYear.getSelectedItem ();
+        int month = (int) cmbMonth.getSelectedItem ();
+        int day = (int) cmbDay.getSelectedItem ();
+        Calendar c = Calendar.getInstance ();
+        c.set (Calendar.YEAR, year);
+        c.set (Calendar.MONTH, month - 1);
+        c.set (Calendar.DAY_OF_MONTH, day);
+        if (c.getTimeInMillis () < System.currentTimeMillis ()) {
+            handler.sendUIMessage (SHOW_ERROR, "有效期不能比今天更早！");
+            return false;
+        }
+
+        if (userName.length () == 0) {
+            handler.sendUIMessage (SHOW_ERROR, "请填写用户名");
+            return false;
+        }
+
+        return true;
     }
 
     private void erase () {
@@ -302,8 +403,16 @@ public class WriteCardFrame extends JFrame implements IMessageHandler, ActionLis
     }
 
     private void createNewCard () {
-        int no = (int) (Math.random () * 100000);
-        handler.sendUIMessage (CREATE_NEW_CARD, no);
+        txtCardNo.setText ("");
+        txtUserName.setText ("");
+        Calendar now = Calendar.getInstance ();
+        txtWriteDate.setText (sf.format (now.getTime ()));
+        now.add (Calendar.YEAR, 1);
+        now.add (Calendar.DAY_OF_MONTH, -1);
+        cmbYear.setSelectedItem (now.get (Calendar.YEAR));
+        cmbMonth.setSelectedIndex (now.get (Calendar.MONTH));
+        cmbDay.setSelectedIndex (now.get (Calendar.DAY_OF_MONTH) - 1);
+        chkAdmin.setSelected (false);
     }
 
     private boolean prompt (String message) {
@@ -343,6 +452,7 @@ public class WriteCardFrame extends JFrame implements IMessageHandler, ActionLis
     }
 
     public static void main (String[] args) throws Exception {
+        System.setProperty ("org.dreamwork.secure.provider", "org.bouncycastle.jce.provider.BouncyCastleProvider");
         UIManager.setLookAndFeel (UIManager.getSystemLookAndFeelClassName ());
         Enumeration<Object> keys = UIManager.getDefaults().keys();
         Object key, value;

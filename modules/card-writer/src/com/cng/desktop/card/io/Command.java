@@ -11,7 +11,7 @@ import java.io.IOException;
 public class Command {
     public static final short header = (short) 0xCAFE, tail = (short) 0xBABE;
     public short id;
-    public int action, admin, timestamp, expire, cardNo, mainVersion = 1, minVersion = 0;
+    public int action, admin, timestamp, expire, cardNo, majorVersion = 1, minorVersion = 0;
 
     public static final int ACTION_WRITE = 'W', ACTION_READ = 'R', ACTION_ERASE = 'E', ACTION_NOOP = 'N';
 
@@ -44,8 +44,8 @@ public class Command {
                 "\ttimestamp : " + Tools.toHex (Tools.intToBytes (timestamp)) + "\r\n" +
                 "\texpire    : " + Tools.toHex (Tools.intToBytes (expire)) + "\r\n" +
                 "\tcard no   : " + Tools.toHex (Tools.intToBytes (cardNo)) + "\r\n" +
-                "\tmain ver  : " + String.format ("0x%02X", mainVersion) + "\r\n" +
-                "\tmin ver   : " + String.format ("02%02X", minVersion) + "\r\n" +
+                "\tmain ver  : " + String.format ("0x%02X", majorVersion) + "\r\n" +
+                "\tmin ver   : " + String.format ("02%02X", minorVersion) + "\r\n" +
                 "\ttail      : " + String.format ("0x%04X", tail) + "\r\n}";
     }
 
@@ -58,8 +58,8 @@ public class Command {
             baos.write (Tools.intToBytes (timestamp, 4, true));
             baos.write (Tools.intToBytes (expire, 4, true));
             baos.write (Tools.intToBytes (cardNo, 4, true));
-            baos.write (mainVersion);
-            baos.write (minVersion);
+            baos.write (majorVersion);
+            baos.write (minorVersion);
 
             byte[] buff = baos.toByteArray ();
             int sum = 0;

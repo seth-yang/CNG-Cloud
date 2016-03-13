@@ -67,8 +67,8 @@ public class SerialTest {
         c.add (Calendar.YEAR, 1);
         long expire = c.getTimeInMillis ();
         Command command = new Command ((short) 1, Command.ACTION_READ, true, System.currentTimeMillis (), expire, 1);
-        command.mainVersion = 1;
-        command.minVersion = 10;
+        command.majorVersion = 1;
+        command.minorVersion = 10;
         System.out.println (command);
         System.out.println (Tools.toHex (command.toByteArray ()));
 */
